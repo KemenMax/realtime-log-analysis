@@ -1,3 +1,12 @@
+# 忽略 Maven 文件夹下的所有文件，不计入语言统计
 maven/** linguist-vendored
+
+# 同样忽略可能产生干扰的脚本文件
 *.cmd linguist-vendored
 *.sh linguist-vendored
+
+# 强制检测并统计所有 Java 和相关核心文件
+*.java linguist-detectable=true
+*.xml linguist-detectable=true
+*.html linguist-detectable=true
+*.properties linguist-detectable=true
