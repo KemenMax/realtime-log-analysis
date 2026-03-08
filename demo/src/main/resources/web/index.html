@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时热词监控系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Noto+Sans+SC:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #8ab6d6;
+            --bg-color: #fcefe8;
+            --card-bg: #ffffff;
+            --text-color: #555555;
+            --secondary-text: #888888;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            --radius: 24px;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            /* 防止页面滚动 */
+        }
+
+        header {
+            background-color: transparent;
+            padding: 16px 32px;
+            /* 减少垂直内边距 */
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 24px;
+            /* 稍微小一点 */
+            font-weight: 600;
+            margin: 0;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 span.icon {
+            font-size: 28px;
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 7fr 3fr;
+            gap: 24px;
+            /* 减少间隙 */
+            padding: 0 32px 16px 32px;
+            /* 减少底部内边距 */
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 0;
+            /* 对网格项溢出很重要 */
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            /* 减少内边距 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 2px solid #fff;
+            height: 100%;
+            /* 填充网格单元 */
+            box-sizing: border-box;
+        }
+
+        .card-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        #chart-container {
+            flex: 1;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            min-height: 0;
+            /* 允许收缩 */
+        }
+
+        .ranking-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+            min-height: 0;
+            /* 允许收缩 */
+        }
+
+        /* 自定义滚动条 */
+        .ranking-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ranking-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .ranking-list::-webkit-scrollbar-thumb {
+            background: #d1d9e6;
+            border-radius: 4px;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            /* 紧凑的内边距 */
+            margin-bottom: 8px;
+            background: #f8fbff;
+            border-radius: 16px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .ranking-item:hover {
+            transform: translateX(4px);
+            background: #f0f7ff;
+        }
+
+        .rank-index {
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
+            background-color: #e0e7ff;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 12px;
+        }
+
+        .rank-index.top-1 {
+            background-color: #FEE2E2;
+            color: #EF4444;
+        }
+
+        .rank-index.top-2 {
+            background-color: #FEF3C7;
+            color: #F59E0B;
+        }
+
+        .rank-index.top-3 {
+            background-color: #ECFCCB;
+            color: #84CC16;
+        }
+
+        .keyword {
+            flex: 1;
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        .count {
+            background: #ffffff;
+            padding: 2px 10px;
+            border-radius: 20px;
+            color: var(--secondary-text);
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        footer {
+            text-align: center;
+            padding: 8px 0 16px 0;
+            font-size: 12px;
+            color: var(--secondary-text);
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                height: auto;
+                overflow: auto;
+            }
+
+            #chart-container {
+                min-height: 400px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1><span class="icon">☁️</span> 实时热词监控系统</h1>
+    </header>
+
+    <main>
+        <div class="card">
+            <div class="card-header">热词云图</div>
+            <div id="chart-container"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                实时排行榜
+                <span
+                    style="font-size: 12px; color: #999; background: #f5f5f5; padding: 4px 10px; border-radius: 20px;">Live</span>
+            </div>
+            <div id="ranking-list" class="ranking-list">
+                <!-- 数据将被注入到这里 -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        版权所有 &copy; 熊厚凯
+    </footer>
+
+    <script>
+        var chartDom = document.getElementById('chart-container');
+        var myChart = echarts.init(chartDom);
+        var rankingList = document.getElementById('ranking-list');
+        var option;
+
+        // 和谐可爱的柔和色调
+        const colors = [
+            '#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA',
+            '#F49AC2', '#CB99C9', '#C23B22', '#FDFD96', '#FF6961', '#77DD77'
+        ];
+
+        option = {
+            tooltip: {
+                formatter: '{b}: {c}',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: 12,
+                padding: [10, 14],
+                textStyle: {
+                    color: '#666',
+                    fontFamily: 'Fredoka'
+                }
+            },
+            series: [{
+                type: 'treemap',
+                id: 'echarts-treemap',
+                animationDurationUpdate: 1000,
+                roam: false,
+                nodeClick: false,
+                data: [],
+                universalTransition: true,
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                // 填充容器
+                width: '100%',
+                height: '100%',
+                label: {
+                    show: true,
+                    formatter: '{b}\n\n{c}',
+                    fontSize: 20,
+                    fontFamily: 'Fredoka',
+                    fontWeight: 500,
+                    color: '#fff',
+                    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+                    textShadowBlur: 2
+                },
+                itemStyle: {
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    gapWidth: 3,
+                    borderRadius: 10
+                },
+                breadcrumb: { show: false },
+                color: colors // 应用色调
+            }]
+        };
+
+        myChart.setOption(option);
+
+        function updateRankingList(data) {
+            rankingList.innerHTML = '';
+            data.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'ranking-item';
+
+                let rankClass = '';
+                if (index === 0) rankClass = 'top-1';
+                else if (index === 1) rankClass = 'top-2';
+                else if (index === 2) rankClass = 'top-3';
+
+                div.innerHTML = `
+                    <div class="rank-index ${rankClass}">${index + 1}</div>
+                    <div class="keyword">${item.name}</div>
+                    <div class="count">${item.value}</div>
+                `;
+                rankingList.appendChild(div);
+            });
+        }
+
+        function fetchData() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    // 更新图表
+                    myChart.setOption({
+                        series: [{
+                            data: data
+                        }]
+                    });
+
+                    // 更新列表
+                    updateRankingList(data);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // 每 2 秒获取一次数据
+        setInterval(fetchData, 2000);
+        fetchData();
+
+        window.addEventListener('resize', myChart.resize);
+    </script>
+</body>
+
+</html>

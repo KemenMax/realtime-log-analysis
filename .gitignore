@@ -1,0 +1,27 @@
+# Java/Maven 常用忽略项目
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# 日志文件
+*.log
+producer.log
+spark_app.log
+web_server.log
+demo/producer.log
+demo/spark_app.log*
+demo/web_server.log
+
+# 进程 ID 文件
+*.pid
+
+# IDE 相关
+.idea/
+.vscode/
+*.iml
+
+# 操作系统生成文件
+.DS_Store
+Thumbs.db
